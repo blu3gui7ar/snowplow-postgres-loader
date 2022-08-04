@@ -15,30 +15,26 @@ package com.snowplowanalytics.snowplow.postgres.config
 import java.util.Date
 import java.time.Instant
 import java.nio.file.{Path => JPath}
-
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-
 import cats.syntax.either._
-
-import cats.effect.Sync
-
+import cats.effect.{Clock, ConcurrentEffect, ContextShift, Sync, Timer}
 import fs2.aws.kinesis.KinesisCheckpointSettings
-
 import io.circe.Decoder
 import io.circe.generic.extras.semiauto.deriveConfiguredDecoder
 import io.circe.generic.extras.Configuration
 import io.circe.config.syntax._
-
 import software.amazon.awssdk.regions.Region
 import software.amazon.kinesis.common.{InitialPositionInStream, InitialPositionInStreamExtended}
-
 import blobstore.Path
-
 import retry.RetryPolicy
 import retry.RetryPolicies._
-
-import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig.{Purpose, Source, Sink, Monitoring, BackoffPolicy}
+import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig.{BackoffPolicy, Monitoring, Purpose, Sink, Source}
+import fs2.kafka.ConsumerSettings
+//import cats.effect._
+//import cats.syntax.all._
+//import fs2.kafka._
+//import scala.concurrent.duration._
 
 case class LoaderConfig(input: Source,
                         output: Sink,
@@ -213,6 +209,21 @@ object LoaderConfig {
       }
     }
 
+    case class Kafka(topicId: String, settings: Kafka.Settings) extends Source
+
+    object Kafka {
+      case class Settings(maxBatchSize: Int, maxBatchWait: FiniteDuration) {
+        def unwrap[F[_]: ConcurrentEffect: ContextShift: Clock: Timer]: ConsumerSettings[F, String, String] =
+          ConsumerSettings[F, String, String].withClientId("asdf")
+      }
+
+      object Settings {
+        implicit val kafkaSettingsDecoder: Decoder[Settings] = {
+          deriveConfiguredDecoder[Settings].emap { settings => Right(settings) }
+        }
+      }
+    }
+
     case class Local(path: PathInfo) extends Source
 
     case class PubSub(projectId: String, subscriptionId: String, checkpointSettings: PubSub.CheckpointSettings) extends Source
@@ -250,6 +261,8 @@ object LoaderConfig {
                       maxBatchSize: Long,
                       maxBatchBytes: Long,
                       numCallbackExecutors: Int) extends StreamSink
+
+    case class Kafka(topicId: String) extends StreamSink
 
     implicit def sinkConfigDecoder: Decoder[StreamSink] =
       deriveConfiguredDecoder[StreamSink]

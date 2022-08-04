@@ -28,6 +28,7 @@ object Dependencies {
     val circeConfig  = "0.8.0"
     val fs2Aws       = "3.1.1"
     val fs2PubSub    = "0.17.0"
+    val fs2Kafka     = "1.10.0"
     val doobie       = "0.13.4"
     val fs2          = "2.5.9"
     val log4s        = "1.10.0"
@@ -65,6 +66,7 @@ object Dependencies {
   val circeConfig   = "io.circe"                 %% "circe-config"           % V.circeConfig
   val circeLiteral  = "io.circe"                 %% "circe-literal"          % V.circe
   val fs2Aws        = "io.laserdisc"             %% "fs2-aws"                % V.fs2Aws
+  val fs2Kafka      = "com.github.fd4s"          %% "fs2-kafka"              % V.fs2Kafka
   val fs2PubSub     = "com.permutive"            %% "fs2-google-pubsub-grpc" % V.fs2PubSub
   val doobie        = "org.tpolecat"             %% "doobie-core"            % V.doobie
   val doobiePg      = "org.tpolecat"             %% "doobie-postgres"        % V.doobie

@@ -66,6 +66,7 @@ lazy val loader = project
       Dependencies.fs2Aws,
       Dependencies.fs2PubSub,
       Dependencies.fs2BlobCore,
+      Dependencies.fs2Kafka,
       Dependencies.decline,
       Dependencies.config,
       Dependencies.specs2

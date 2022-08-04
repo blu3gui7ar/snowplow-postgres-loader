@@ -27,6 +27,7 @@ import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig.Source
 import com.snowplowanalytics.snowplow.postgres.env.kinesis.{KinesisSink, KinesisEnv}
 import com.snowplowanalytics.snowplow.postgres.env.local.{LocalSink, LocalEnv}
 import com.snowplowanalytics.snowplow.postgres.env.pubsub.{PubSubSink, PubSubEnv}
+import com.snowplowanalytics.snowplow.postgres.env.kafka.{KafkaSink, KafkaEnv}
 
 final case class Environment[F[_], A](
   source: Stream[F, A],
@@ -46,11 +47,13 @@ object Environment {
         case c: LoaderConfig.StreamSink.Kinesis => KinesisSink.create(c, config.monitoring, config.backoffPolicy)
         case c: LoaderConfig.StreamSink.PubSub => PubSubSink.create(c, config.backoffPolicy)
         case c: LoaderConfig.StreamSink.Local => LocalSink.create(c, blocker)
+        case c: LoaderConfig.StreamSink.Kafka => KafkaSink.create(c/*, config.backoffPolicy*/)
       }
       env <- config.input match {
         case c: Source.Kinesis => KinesisEnv.create[F](blocker, c, badSink, config.monitoring.metrics, config.purpose)
         case c: Source.PubSub => PubSubEnv.create[F](blocker, c, badSink)
         case c: Source.Local => LocalEnv.create[F](blocker, c, badSink)
+        case c: Source.Kafka => KafkaEnv.create[F](c, badSink, config.purpose)
       }
     } yield env
 
@@ -58,6 +61,7 @@ object Environment {
     config match {
       case c: LoaderConfig.StreamSink.Kinesis => KinesisSink.streamExists(c)
       case c: LoaderConfig.StreamSink.PubSub => PubSubSink.topicExists(c)
+      case c: LoaderConfig.StreamSink.Kafka => KafkaSink.topicExists(c)
       case _ => Async[F].pure(true)
     }
 }
