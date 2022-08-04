@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="sbt: eu.timepit:refined_2.13:0.9.24:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/eu/timepit/refined_2.13/0.9.24/refined_2.13-0.9.24.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/eu/timepit/refined_2.13/0.9.24/refined_2.13-0.9.24-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/eu/timepit/refined_2.13/0.9.24/refined_2.13-0.9.24-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

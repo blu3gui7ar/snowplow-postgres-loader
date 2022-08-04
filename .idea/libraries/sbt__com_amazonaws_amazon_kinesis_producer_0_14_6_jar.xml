@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="sbt: com.amazonaws:amazon-kinesis-producer:0.14.6:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/amazonaws/amazon-kinesis-producer/0.14.6/amazon-kinesis-producer-0.14.6.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/amazonaws/amazon-kinesis-producer/0.14.6/amazon-kinesis-producer-0.14.6-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/amazonaws/amazon-kinesis-producer/0.14.6/amazon-kinesis-producer-0.14.6-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

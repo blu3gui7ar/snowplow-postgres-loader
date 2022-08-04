@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="sbt: org.typelevel:discipline-munit_2.13:1.0.9:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/discipline-munit_2.13/1.0.9/discipline-munit_2.13-1.0.9.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/discipline-munit_2.13/1.0.9/discipline-munit_2.13-1.0.9-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/discipline-munit_2.13/1.0.9/discipline-munit_2.13-1.0.9-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
