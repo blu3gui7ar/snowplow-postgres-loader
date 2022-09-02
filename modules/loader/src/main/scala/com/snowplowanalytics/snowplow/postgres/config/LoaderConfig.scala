@@ -30,7 +30,7 @@ import blobstore.Path
 import retry.RetryPolicy
 import retry.RetryPolicies._
 import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig.{BackoffPolicy, Monitoring, Purpose, Sink, Source}
-import fs2.kafka.ConsumerSettings
+import fs2.kafka.{AutoOffsetReset, ConsumerSettings}
 //import cats.effect._
 //import cats.syntax.all._
 //import fs2.kafka._
@@ -212,9 +212,41 @@ object LoaderConfig {
     case class Kafka(topicId: String, settings: Kafka.Settings) extends Source
 
     object Kafka {
-      case class Settings(maxBatchSize: Int, maxBatchWait: FiniteDuration) {
+      case class Settings(
+                           clientId: String,
+                           groupId: String,
+                           groupInstanceId: String,
+                           bootstrapServers: String,
+                           autoOffsetReset: String, //enum
+                           maxPollRecords: Int,
+                           maxPollInterval: FiniteDuration,
+                           sessionTimeout: FiniteDuration,
+                           heartBeatInterval: FiniteDuration,
+                           enableAutoCommit: Boolean,
+                           autoCommitInterval: FiniteDuration,
+                           requestTimeout: FiniteDuration,
+                           defaultApiTimeout: FiniteDuration,
+                           isolationLevel: String, //enum
+                           allowAutoCreateTopics: Boolean,
+                           clientRack: String,
+                           closeTimeout: FiniteDuration,
+                           commitTimeout: FiniteDuration,
+                           pollInterval: FiniteDuration,
+                           pollTimeout: FiniteDuration,
+                           commitRecovery: String, //enum
+                           //createConsumer: String,
+                           //recordMetadata
+                           maxPrefetchBatches: Int,
+                           maxBatchSize: Int,
+                           maxBatchWait: FiniteDuration
+                         ) {
         def unwrap[F[_]: ConcurrentEffect: ContextShift: Clock: Timer]: ConsumerSettings[F, String, String] =
-          ConsumerSettings[F, String, String].withClientId("asdf")
+          ConsumerSettings[F, String, String]
+            .withClientId(clientId)
+            .withBootstrapServers(bootstrapServers)
+            .withGroupId(groupId)
+            .withAutoOffsetReset(AutoOffsetReset.Latest)
+            .withClientRack(clientRack)
       }
 
       object Settings {
@@ -262,7 +294,49 @@ object LoaderConfig {
                       maxBatchBytes: Long,
                       numCallbackExecutors: Int) extends StreamSink
 
-    case class Kafka(topicId: String) extends StreamSink
+    case class Kafka(topicId: String, settings: Kafka.Settings) extends StreamSink
+
+    object Kafka {
+      case class Settings(
+                           clientId: String,
+                           groupId: String,
+                           groupInstanceId: String,
+                           bootstrapServers: String,
+                           autoOffsetReset: String, //enum
+                           maxPollRecords: Int,
+                           maxPollInterval: FiniteDuration,
+                           sessionTimeout: FiniteDuration,
+                           heartBeatInterval: FiniteDuration,
+                           enableAutoCommit: Boolean,
+                           autoCommitInterval: FiniteDuration,
+                           requestTimeout: FiniteDuration,
+                           defaultApiTimeout: FiniteDuration,
+                           isolationLevel: String, //enum
+                           allowAutoCreateTopics: Boolean,
+                           clientRack: String,
+                           closeTimeout: FiniteDuration,
+                           commitTimeout: FiniteDuration,
+                           pollInterval: FiniteDuration,
+                           pollTimeout: FiniteDuration,
+                           commitRecovery: String, //enum
+                           //createConsumer: String,
+                           //recordMetadata
+                           maxPrefetchBatches: Int,
+                           maxBatchSize: Int,
+                           maxBatchWait: FiniteDuration
+                         ) {
+        def unwrap[F[_]: ConcurrentEffect: ContextShift: Clock: Timer]: ConsumerSettings[F, String, String] =
+          ConsumerSettings[F, String, String]
+            .withClientId(clientId)
+            .withBootstrapServers(bootstrapServers)
+      }
+
+      object Settings {
+        implicit val kafkaSettingsDecoder: Decoder[Settings] = {
+          deriveConfiguredDecoder[Settings].emap { settings => Right(settings) }
+        }
+      }
+    }
 
     implicit def sinkConfigDecoder: Decoder[StreamSink] =
       deriveConfiguredDecoder[StreamSink]

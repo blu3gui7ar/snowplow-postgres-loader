@@ -20,7 +20,7 @@ import com.snowplowanalytics.snowplow.postgres.streaming.StreamSink
 import org.log4s.getLogger
 
 import scala.jdk.CollectionConverters._
-import java.nio.ByteBuffer
+//import java.nio.ByteBuffer
 import java.util.UUID
 import fs2.kafka._
 import org.apache.kafka.clients.admin.AdminClient
@@ -34,18 +34,17 @@ object KafkaSink {
   def create[F[_]: Async: Timer: ConcurrentEffect: ContextShift](config: LoaderConfig.StreamSink.Kafka/*, backoffPolicy: BackoffPolicy*/): Resource[F, StreamSink[F]] =
     mkProducer(config).map(writeToKafka(config.topicId/*, backoffPolicy*/))
 
-  private def mkProducer[F[_]: Sync: ConcurrentEffect: ContextShift](config: LoaderConfig.StreamSink.Kafka): Resource[F, KafkaProducer[F, String, String]] = {
-    val settings = ProducerSettings[F, String, String].withBootstrapServers(config.topicId) //todo
+  private def mkProducer[F[_]: Sync: ConcurrentEffect: ContextShift](config: LoaderConfig.StreamSink.Kafka): Resource[F, KafkaProducer[F, String, Array[Byte]]] = {
+    val settings = ProducerSettings[F, String, Array[Byte]].withBootstrapServers(config.settings.bootstrapServers)
     KafkaProducer[F].resource(settings)
   }
 
   private def writeToKafka[F[_]: Async: Timer: ContextShift](streamName: String/*, _backoffPolicy: BackoffPolicy*/)
-                                                              (producer: KafkaProducer[F, String, String])
+                                                              (producer: KafkaProducer[F, String, Array[Byte]])
                                                               (data: Array[Byte]): F[Unit] = {
     val res = for {
-      byteBuffer <- Async[F].delay(ByteBuffer.wrap(data))
       partitionKey <- Async[F].delay(UUID.randomUUID().toString)
-      record = ProducerRecord(streamName, partitionKey, byteBuffer.toString())
+      record = ProducerRecord(streamName, partitionKey, data)
       cb <- producer.produce(ProducerRecords.one(record))
 //      cbRes <- registerCallback(cb)
       _ <- ContextShift[F].shift
@@ -72,8 +71,14 @@ object KafkaSink {
 //      )
 //    }
 
+
   def topicExists[F[_]: Async: ContextShift](config: LoaderConfig.StreamSink.Kafka)/*(implicit ec: ExecutionContext)*/: F[Boolean] =
-    mkKafkaAdminClient(Map()).use { client =>
+    Sync[F].pure(config.settings.bootstrapServers.nonEmpty)
+
+  def topicExistsV1[F[_]: Async: ContextShift](config: LoaderConfig.StreamSink.Kafka)/*(implicit ec: ExecutionContext)*/: F[Boolean] = {
+    mkKafkaAdminClient(Map(
+      "bootstrap.servers" -> config.settings.bootstrapServers
+    )).use { client =>
       Async[F].async[Boolean] { cb =>
         val lists = client.describeTopics(ArrayBuffer(config.topicId).asJava)
         val exist = lists.values().asScala.get(config.topicId).map(_.get).map(_.name()).nonEmpty
@@ -82,6 +87,7 @@ object KafkaSink {
         ContextShift[F].shift.as(result)
       }
     }
+  }
 
   def mkKafkaAdminClient[F[_]: Sync](props: Map[String, Object]): Resource[F, AdminClient] =
     Resource.fromAutoCloseable {

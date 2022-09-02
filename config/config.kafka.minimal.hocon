@@ -1,0 +1,19 @@
+# The minimum required config options for loading from kinesis
+{
+  "input": {
+    "type": "Kafka"
+    "streamName": "enriched-events"
+    "region": "eu-central-1"
+  }
+
+  "output" : {
+    good: {
+      "type": "Postgres"
+      "host": "localhost"
+      "database": "snowplow"
+      "username": "postgres"
+      "password": ${POSTGRES_PASSWORD}
+      "schema": "atomic"
+    }
+  }
+}

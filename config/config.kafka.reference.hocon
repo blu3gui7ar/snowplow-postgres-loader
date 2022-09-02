@@ -1,0 +1,135 @@
+{
+  "input": {
+    # Enable the Kafka source
+    "type": "Kafka"
+    # Name of the application which the KCL daemon should assume
+    "appName": "acme-postgres-loader"
+    # Name of the Kinesis stream to read from
+    "topicId": "enriched-events"
+    # AWS region in which the Kinesis stream resides.
+    # "region": "eu-central-1"
+    # Either TRIM_HORIZON or LATEST
+    # "initialPosition": "TRIM_HORIZON"
+
+    # Optional, set the polling mode for retrieving records. Default is FanOut
+    # "retrievalMode": "FanOut"
+    # "retrievalMode": {
+    #   "type": "Polling"
+    #   "maxRecords": 1000
+    # }
+
+    # Optional, configure the checkpointer.
+    "settings": {
+      topicId: "enriched-events",
+      clientId: "kafka-postgres-loader",
+      groupId: "kafka-postgres-group",
+      groupInstanceId: "kafka-posgres-group-gid",
+      bootstrapServers: "18.216.111.42:9092",
+      autoOffsetReset: "latest", //enum
+      maxPollRecords: 100, //?
+      maxPollInterval: 20 seconds, //?
+      sessionTimeout: 6000 milliseconds, //?
+      heartBeatInterval: 20 seconds, //?
+      enableAutoCommit: false,
+      autoCommitInterval: 1000 milliseconds, //?
+      requestTimeout: 200 milliseconds,
+      defaultApiTimeout: 200 milliseconds, //?
+      isolationLevel: "ReadCommitted", //enum
+      allowAutoCreateTopics: true,
+      clientRack: "client-rack",
+      closeTimeout: 20 seconds,
+      commitTimeout: 15 seconds,
+      pollInterval: 50 milliseconds,
+      pollTimeout: 50 milliseconds,
+      commitRecovery: "Default", //enum
+      //createConsumer: String,
+      //recordMetadata
+      maxPrefetchBatches: 2,
+      maxBatchSize: 1000,
+      maxBatchWait: 10 seconds,
+    }
+  }
+
+  "output" : {
+    # Events that pass validation are written to Postgres.
+    "good": {
+      "type": "Postgres"
+      # PostgreSQL host ('localhost' for enabled SSH Tunnel)
+      "host": "localhost"
+      # PostgreSQL database port
+      "port": 5432
+      # PostgreSQL database name
+      "database": "kafkabi"
+      # PostgreSQL user to load data
+      "username": "kafkabi"
+      # PostgreSQL password, either plain text or from an environment variable
+      "password": "12345678"
+      # "password": ${?POSTGRES_PASSWORD}
+      # PostgreSQL database schema
+      "schema": "public"
+      # JDBC ssl mode
+      # "sslMode": "REQUIRE"
+      "sslMode": "PREFER"
+      # Maximum number of connections database pool is allowed to reach
+      # Default is 10
+      "maxConnections": 10
+      # Size of the thread pool for blocking database operations
+      # Default is value of "maxConnections"
+      "threadPoolSize": 10
+    }
+
+    # Events that fail validation are written to specified stream.
+    # If this section is removed from config, bad row output will be disabled.
+    "bad": {
+      "type": "Kafka"
+      "topicId": "bad-rows",
+      # "bootstrapServers": "18.216.111.42:9092",
+
+      "settings": {
+        topicId: "bad-rows",
+        clientId: "kafka-postgres-loader",
+        groupId: "kafka-postgres-bad-group",
+        groupInstanceId: "kafka-posgres-bad-group-gid",
+        bootstrapServers: "18.216.111.42:9092",
+        autoOffsetReset: "smallest", //enum
+        maxPollRecords: 100, //?
+        maxPollInterval: 20 seconds, //?
+        sessionTimeout: 6000 milliseconds, //?
+        heartBeatInterval: 20 seconds, //?
+        enableAutoCommit: false,
+        autoCommitInterval: 1000 milliseconds, //?
+        requestTimeout: 200 milliseconds,
+        defaultApiTimeout: 200 milliseconds, //?
+        isolationLevel: "ReadCommitted", //enum
+        allowAutoCreateTopics: true,
+        clientRack: "client-bad-rack",
+        closeTimeout: 20 seconds,
+        commitTimeout: 15 seconds,
+        pollInterval: 50 milliseconds,
+        pollTimeout: 50 milliseconds,
+        commitRecovery: "Default", //enum
+        //createConsumer: String,
+        //recordMetadata
+        maxPrefetchBatches: 2,
+        maxBatchSize: 1000,
+        maxBatchWait: 10 seconds,
+      }
+    }
+  }
+
+  # Kind of data stored in this instance. Either ENRICHED_EVENTS or JSON
+  "purpose": "ENRICHED_EVENTS"
+
+  "monitoring": {
+    "metrics": {
+      # Optional, cloudwatch metrics are enabled by default.
+      # "cloudWatch": false
+    }
+  }
+
+  # Minimum and maximum backoff periods
+  "backoffPolicy": {
+    "minBackoff": 100 milliseconds
+    "maxBackoff": 10 seconds
+  }
+}

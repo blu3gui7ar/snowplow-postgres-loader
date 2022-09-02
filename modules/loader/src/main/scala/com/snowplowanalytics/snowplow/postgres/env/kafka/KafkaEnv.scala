@@ -22,7 +22,7 @@ import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig.{Purpose, Sou
 import com.snowplowanalytics.snowplow.postgres.env.Environment
 import com.snowplowanalytics.snowplow.postgres.streaming.{SinkPipe, StreamSink, TimeUtils}
 import fs2.kafka._
-import fs2.{Pipe, Stream}
+import fs2.Pipe
 //import scala.concurrent.duration._
 import cats.syntax.all._
 
@@ -33,23 +33,26 @@ object KafkaEnv {
                                                                  badSink: StreamSink[F],
                                                                  purpose: Purpose): Resource[F, Environment[F, CommittableConsumerRecord[F, String, String]]] = {
 
-    for {
-      kafka <- KafkaConsumer[F].resource(config.settings.unwrap)
-    } yield Environment(
-        getSource(kafka),
-        badSink,
-        getPayload[F](purpose, _),
-        checkpointer(config.settings),
-        SinkPipe.OrderedPipe.forTransactor[F]
+    val kafka = KafkaConsumer[F].stream(config.settings.unwrap).subscribeTo(config.topicId).stream
+    Resource.pure(
+      Environment(
+          kafka,
+          badSink,
+          getPayload[F](purpose, _),
+          checkpointer(config.settings),
+          SinkPipe.OrderedPipe.forTransactor[F]
       )
+    )
   }
 
-  private def getSource[F[_]](kafka: KafkaConsumer[F, String, String]): Stream[F, CommittableConsumerRecord[F, String, String]] = {
+  /*
+  private def getSource[F[_]](kafka: KafkaConsumer[F, String, String], topicId: String): Stream[F, CommittableConsumerRecord[F, String, String]] = {
     // These arguments are used to create KinesisConsumerSettings later on.
     // However, only bufferSize field of created KinesisConsumerSettings object is used later on
     // therefore given stream name and app name are not used in anywhere.
-    kafka.stream
+    kafka.stream.subscribeTo(topicId)
   }
+  */
 
   private def getPayload[F[_]: Clock: Monad](purpose: Purpose, record: CommittableConsumerRecord[F, String, String]): F[Either[BadRow, String]] =
     EitherT.fromEither[F](Either.catchNonFatal(record.record.value))
