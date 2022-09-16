@@ -23,6 +23,17 @@
             "uri": "http://mirror01.iglucentral.com"
           }
         }
+      },
+      {
+        "name": "Iglu Customer",
+        "priority": 0,
+        "vendorPrefixes": [],
+        "connection": {
+          "http": {
+            "uri": "http://sp-iglu-lb-5553611.us-east-2.elb.amazonaws.com/api",
+            "apikey": "003EA646-061A-44A4-878C-ED58A56E3C9D"
+          }
+        }
       }
     ]
   }

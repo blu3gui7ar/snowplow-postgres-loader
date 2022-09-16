@@ -47,7 +47,7 @@ object Environment {
         case c: LoaderConfig.StreamSink.Kinesis => KinesisSink.create(c, config.monitoring, config.backoffPolicy)
         case c: LoaderConfig.StreamSink.PubSub => PubSubSink.create(c, config.backoffPolicy)
         case c: LoaderConfig.StreamSink.Local => LocalSink.create(c, blocker)
-        case c: LoaderConfig.StreamSink.Kafka => KafkaSink.create(c/*, config.backoffPolicy*/)
+        case c: LoaderConfig.StreamSink.Kafka => KafkaSink.create(c, blocker/*, config.backoffPolicy*/)
       }
       env <- config.input match {
         case c: Source.Kinesis => KinesisEnv.create[F](blocker, c, badSink, config.monitoring.metrics, config.purpose)

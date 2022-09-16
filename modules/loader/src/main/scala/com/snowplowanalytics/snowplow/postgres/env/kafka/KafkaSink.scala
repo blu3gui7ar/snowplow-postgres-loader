@@ -12,7 +12,7 @@
  */
 package com.snowplowanalytics.snowplow.postgres.env.kafka
 
-import cats.effect.{Async, ConcurrentEffect, ContextShift, Resource, Sync, Timer}
+import cats.effect.{Async, Blocker, ConcurrentEffect, ContextShift, Resource, Sync, Timer}
 import cats.implicits._
 import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig
 //import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig.{BackoffPolicy}
@@ -31,12 +31,25 @@ object KafkaSink {
 
   lazy val logger = getLogger
 
-  def create[F[_]: Async: Timer: ConcurrentEffect: ContextShift](config: LoaderConfig.StreamSink.Kafka/*, backoffPolicy: BackoffPolicy*/): Resource[F, StreamSink[F]] =
-    mkProducer(config).map(writeToKafka(config.topicId/*, backoffPolicy*/))
+  def create[F[_]: Async: Timer: ConcurrentEffect: ContextShift](config: LoaderConfig.StreamSink.Kafka,
+                                                                 blocker: Blocker
+                                                                 /*, backoffPolicy: BackoffPolicy*/): Resource[F, StreamSink[F]] =
+    mkProducer(blocker, config).map(writeToKafka(config.topicName/*, backoffPolicy*/))
 
-  private def mkProducer[F[_]: Sync: ConcurrentEffect: ContextShift](config: LoaderConfig.StreamSink.Kafka): Resource[F, KafkaProducer[F, String, Array[Byte]]] = {
-    val settings = ProducerSettings[F, String, Array[Byte]].withBootstrapServers(config.settings.bootstrapServers)
-    KafkaProducer[F].resource(settings)
+  private def mkProducer[F[_]: Sync: ConcurrentEffect: ContextShift](blocker: Blocker,
+                                                                      config: LoaderConfig.StreamSink.Kafka
+                                                                    ): Resource[F, KafkaProducer[F, String, Array[Byte]]] = {
+    val producerSettings =
+      ProducerSettings[F, String, Array[Byte]]
+        .withBootstrapServers(config.bootstrapServers)
+        .withProperties(config.producerConf)
+        .withBlocker(blocker)
+        .withProperties(
+          ("key.serializer", "org.apache.kafka.common.serialization.StringSerializer"),
+          ("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer")
+        )
+
+    KafkaProducer[F].resource(producerSettings)
   }
 
   private def writeToKafka[F[_]: Async: Timer: ContextShift](streamName: String/*, _backoffPolicy: BackoffPolicy*/)
@@ -73,15 +86,15 @@ object KafkaSink {
 
 
   def topicExists[F[_]: Async: ContextShift](config: LoaderConfig.StreamSink.Kafka)/*(implicit ec: ExecutionContext)*/: F[Boolean] =
-    Sync[F].pure(config.settings.bootstrapServers.nonEmpty)
+    Sync[F].pure(config.bootstrapServers.nonEmpty)
 
   def topicExistsV1[F[_]: Async: ContextShift](config: LoaderConfig.StreamSink.Kafka)/*(implicit ec: ExecutionContext)*/: F[Boolean] = {
     mkKafkaAdminClient(Map(
-      "bootstrap.servers" -> config.settings.bootstrapServers
+      "bootstrap.servers" -> config.bootstrapServers
     )).use { client =>
       Async[F].async[Boolean] { cb =>
-        val lists = client.describeTopics(ArrayBuffer(config.topicId).asJava)
-        val exist = lists.values().asScala.get(config.topicId).map(_.get).map(_.name()).nonEmpty
+        val lists = client.describeTopics(ArrayBuffer(config.topicName).asJava)
+        val exist = lists.values().asScala.get(config.topicName).map(_.get).map(_.name()).nonEmpty
         cb(Right(exist))
       }.flatMap { result =>
         ContextShift[F].shift.as(result)

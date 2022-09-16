@@ -5,7 +5,10 @@
     # Name of the application which the KCL daemon should assume
     "appName": "acme-postgres-loader"
     # Name of the Kinesis stream to read from
-    "topicId": "enriched-events"
+    "topicName": "enriched"
+    "bootstrapServers": "18.216.111.42:9092",
+    "maxBatchSize": 1000,
+    "maxBatchWait": 10 seconds,
     # AWS region in which the Kinesis stream resides.
     # "region": "eu-central-1"
     # Either TRIM_HORIZON or LATEST
@@ -19,34 +22,33 @@
     # }
 
     # Optional, configure the checkpointer.
-    "settings": {
-      topicId: "enriched-events",
-      clientId: "kafka-postgres-loader",
-      groupId: "kafka-postgres-group",
-      groupInstanceId: "kafka-posgres-group-gid",
-      bootstrapServers: "18.216.111.42:9092",
-      autoOffsetReset: "latest", //enum
-      maxPollRecords: 100, //?
-      maxPollInterval: 20 seconds, //?
-      sessionTimeout: 6000 milliseconds, //?
-      heartBeatInterval: 20 seconds, //?
-      enableAutoCommit: false,
-      autoCommitInterval: 1000 milliseconds, //?
-      requestTimeout: 200 milliseconds,
-      defaultApiTimeout: 200 milliseconds, //?
-      isolationLevel: "ReadCommitted", //enum
-      allowAutoCreateTopics: true,
-      clientRack: "client-rack",
-      closeTimeout: 20 seconds,
-      commitTimeout: 15 seconds,
-      pollInterval: 50 milliseconds,
-      pollTimeout: 50 milliseconds,
-      commitRecovery: "Default", //enum
+    "consumerConf": {
+      "client.id": "kafka-postgres-loader-1",
+      "group.id": "kafka-postgres-group-1",
+      "group.instance.id": "kafka-posgres-group-gid",
+      // autoOffsetReset: "latest", //enum
+      "auto.offset.reset": "earliest", //enum
+      //maxPollRecords: 100, //?
+      //maxPollInterval: 20 seconds, //?
+      //sessionTimeout: 6000 milliseconds, //?
+      //heartBeatInterval: 20 seconds, //?
+      //enableAutoCommit: false,
+      //autoCommitInterval: 1000 milliseconds, //?
+      //requestTimeout: 200 milliseconds,
+      //defaultApiTimeout: 200 milliseconds, //?
+      //isolationLevel: "ReadCommitted", //enum
+      //allowAutoCreateTopics: true,
+      //clientRack: "client-rack",
+      //closeTimeout: 20 seconds,
+      //commitTimeout: 15 seconds,
+      //pollInterval: 50 milliseconds,
+      //pollTimeout: 50 milliseconds,
+      //commitRecovery: "Default", //enum
       //createConsumer: String,
       //recordMetadata
-      maxPrefetchBatches: 2,
-      maxBatchSize: 1000,
-      maxBatchWait: 10 seconds,
+      // maxPrefetchBatches: 2,
+      // maxBatchSize: 1000,
+      // maxBatchWait: 10 seconds,
     }
   }
 
@@ -82,37 +84,40 @@
     # If this section is removed from config, bad row output will be disabled.
     "bad": {
       "type": "Kafka"
-      "topicId": "bad-rows",
-      # "bootstrapServers": "18.216.111.42:9092",
+      "topicName": "bad-rows",
+      "bootstrapServers": "18.216.111.42:9092",
+      # Optional. Enriched event field to use as Kafka partition key
+      "partitionKey": "app_id"
+      # Optional. Enriched event fields to add as Kafka record headers
+      "headers": [ "app_id" ]
 
-      "settings": {
-        topicId: "bad-rows",
-        clientId: "kafka-postgres-loader",
-        groupId: "kafka-postgres-bad-group",
-        groupInstanceId: "kafka-posgres-bad-group-gid",
-        bootstrapServers: "18.216.111.42:9092",
-        autoOffsetReset: "smallest", //enum
-        maxPollRecords: 100, //?
-        maxPollInterval: 20 seconds, //?
-        sessionTimeout: 6000 milliseconds, //?
-        heartBeatInterval: 20 seconds, //?
-        enableAutoCommit: false,
-        autoCommitInterval: 1000 milliseconds, //?
-        requestTimeout: 200 milliseconds,
-        defaultApiTimeout: 200 milliseconds, //?
-        isolationLevel: "ReadCommitted", //enum
-        allowAutoCreateTopics: true,
-        clientRack: "client-bad-rack",
-        closeTimeout: 20 seconds,
-        commitTimeout: 15 seconds,
-        pollInterval: 50 milliseconds,
-        pollTimeout: 50 milliseconds,
-        commitRecovery: "Default", //enum
-        //createConsumer: String,
-        //recordMetadata
-        maxPrefetchBatches: 2,
-        maxBatchSize: 1000,
-        maxBatchWait: 10 seconds,
+      "producerConf": {
+        "client.id": "kafka-postgres-loader",
+        "group.id": "kafka-postgres-bad-group",
+        "group.instance.id": "kafka-posgres-bad-group-gid",
+        // autoOffsetReset: "latest", //enum
+        "auto.offset.reset": "earliest", //enum
+        //maxPollRecords: 100, //?
+        //maxPollInterval: 20 seconds, //?
+        //sessionTimeout: 6000 milliseconds, //?
+        //heartBeatInterval: 20 seconds, //?
+        //enableAutoCommit: false,
+        //autoCommitInterval: 1000 milliseconds, //?
+        //requestTimeout: 200 milliseconds,
+        //defaultApiTimeout: 200 milliseconds, //?
+        //isolationLevel: "ReadCommitted", //enum
+        //allowAutoCreateTopics: true,
+        //clientRack: "client-bad-rack",
+        //closeTimeout: 20 seconds,
+        //commitTimeout: 15 seconds,
+        //pollInterval: 50 milliseconds,
+        //pollTimeout: 50 milliseconds,
+        //commitRecovery: "Default", //enum
+        ////createConsumer: String,
+        ////recordMetadata
+        //maxPrefetchBatches: 2,
+        //maxBatchSize: 1000,
+        //maxBatchWait: 10 seconds,
       }
     }
   }

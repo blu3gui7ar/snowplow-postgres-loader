@@ -23,6 +23,8 @@ import com.snowplowanalytics.snowplow.postgres.env.Environment
 import com.snowplowanalytics.snowplow.postgres.streaming.{SinkPipe, StreamSink, TimeUtils}
 import fs2.kafka._
 import fs2.Pipe
+
+import java.nio.charset.StandardCharsets
 //import scala.concurrent.duration._
 import cats.syntax.all._
 
@@ -31,15 +33,27 @@ object KafkaEnv {
   def create[F[_]: ConcurrentEffect: ContextShift: Clock: Timer](/*_blocker: Blocker,*/
                                                                  config: Source.Kafka,
                                                                  badSink: StreamSink[F],
-                                                                 purpose: Purpose): Resource[F, Environment[F, CommittableConsumerRecord[F, String, String]]] = {
+                                                                 purpose: Purpose): Resource[F, Environment[F, CommittableConsumerRecord[F, String, Array[Byte]]]] = {
 
-    val kafka = KafkaConsumer[F].stream(config.settings.unwrap).subscribeTo(config.topicId).stream
+    val consumerSettings =
+      ConsumerSettings[F, String, Array[Byte]]
+        .withBootstrapServers(config.bootstrapServers)
+        .withProperties(config.consumerConf)
+        .withEnableAutoCommit(false) // prevent enabling auto-commits by setting this after user-provided config
+        .withProperties(
+          ("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"),
+          ("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer")
+        )
+    val kafka = KafkaConsumer[F]
+      .stream(consumerSettings)
+      .subscribeTo(config.topicName)
+      .records
     Resource.pure(
       Environment(
           kafka,
           badSink,
           getPayload[F](purpose, _),
-          checkpointer(config.settings),
+          checkpointer(config),
           SinkPipe.OrderedPipe.forTransactor[F]
       )
     )
@@ -54,10 +68,10 @@ object KafkaEnv {
   }
   */
 
-  private def getPayload[F[_]: Clock: Monad](purpose: Purpose, record: CommittableConsumerRecord[F, String, String]): F[Either[BadRow, String]] =
-    EitherT.fromEither[F](Either.catchNonFatal(record.record.value))
+  private def getPayload[F[_]: Clock: Monad](purpose: Purpose, record: CommittableConsumerRecord[F, String, Array[Byte]]): F[Either[BadRow, String]] =
+    EitherT.fromEither[F](Either.catchNonFatal(new String(record.record.value, StandardCharsets.UTF_8)))
       .leftSemiflatMap[BadRow] { _ =>
-        val payload = record.record.value
+        val payload = new String(record.record.value, StandardCharsets.UTF_8)
         purpose match {
           case Purpose.Enriched =>
             Monad[F].pure(BadRow.LoaderParsingError(Cli.processor, NotTSV, Payload.RawPayload(payload)))
@@ -72,9 +86,9 @@ object KafkaEnv {
         }
       }.value
 
-  private def checkpointer[F[_]: Timer: ConcurrentEffect](/* _kafka: KafkaConsumer[F, String, String], */ settings: Source.Kafka.Settings)
-    : Pipe[F, CommittableConsumerRecord[F, String, String], Unit] = {
-    val offset: Pipe[F, CommittableConsumerRecord[F, String, String], CommittableOffset[F]] = _.map(_.offset)
-    offset.andThen(commitBatchWithin(settings.maxBatchSize, settings.maxBatchWait))
+  private def checkpointer[F[_]: Timer: ConcurrentEffect](/* _kafka: KafkaConsumer[F, String, String], */ config: Source.Kafka)
+    : Pipe[F, CommittableConsumerRecord[F, String, Array[Byte]], Unit] = {
+    val offset: Pipe[F, CommittableConsumerRecord[F, String, Array[Byte]], CommittableOffset[F]] = _.map(_.offset)
+    offset.andThen(commitBatchWithin(config.maxBatchSize, config.maxBatchWait))
   }
 }

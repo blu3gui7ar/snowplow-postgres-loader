@@ -18,7 +18,7 @@ import java.nio.file.{Path => JPath}
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import cats.syntax.either._
-import cats.effect.{Clock, ConcurrentEffect, ContextShift, Sync, Timer}
+import cats.effect.Sync
 import fs2.aws.kinesis.KinesisCheckpointSettings
 import io.circe.Decoder
 import io.circe.generic.extras.semiauto.deriveConfiguredDecoder
@@ -30,7 +30,7 @@ import blobstore.Path
 import retry.RetryPolicy
 import retry.RetryPolicies._
 import com.snowplowanalytics.snowplow.postgres.config.LoaderConfig.{BackoffPolicy, Monitoring, Purpose, Sink, Source}
-import fs2.kafka.{AutoOffsetReset, ConsumerSettings}
+//import fs2.kafka.{AutoOffsetReset, ConsumerSettings}
 //import cats.effect._
 //import cats.syntax.all._
 //import fs2.kafka._
@@ -209,53 +209,13 @@ object LoaderConfig {
       }
     }
 
-    case class Kafka(topicId: String, settings: Kafka.Settings) extends Source
-
-    object Kafka {
-      case class Settings(
-                           clientId: String,
-                           groupId: String,
-                           groupInstanceId: String,
-                           bootstrapServers: String,
-                           autoOffsetReset: String, //enum
-                           maxPollRecords: Int,
-                           maxPollInterval: FiniteDuration,
-                           sessionTimeout: FiniteDuration,
-                           heartBeatInterval: FiniteDuration,
-                           enableAutoCommit: Boolean,
-                           autoCommitInterval: FiniteDuration,
-                           requestTimeout: FiniteDuration,
-                           defaultApiTimeout: FiniteDuration,
-                           isolationLevel: String, //enum
-                           allowAutoCreateTopics: Boolean,
-                           clientRack: String,
-                           closeTimeout: FiniteDuration,
-                           commitTimeout: FiniteDuration,
-                           pollInterval: FiniteDuration,
-                           pollTimeout: FiniteDuration,
-                           commitRecovery: String, //enum
-                           //createConsumer: String,
-                           //recordMetadata
-                           maxPrefetchBatches: Int,
-                           maxBatchSize: Int,
-                           maxBatchWait: FiniteDuration
-                         ) {
-        def unwrap[F[_]: ConcurrentEffect: ContextShift: Clock: Timer]: ConsumerSettings[F, String, String] =
-          ConsumerSettings[F, String, String]
-            .withClientId(clientId)
-            .withBootstrapServers(bootstrapServers)
-            .withGroupId(groupId)
-            .withAutoOffsetReset(AutoOffsetReset.Latest)
-            .withClientRack(clientRack)
-      }
-
-      object Settings {
-        implicit val kafkaSettingsDecoder: Decoder[Settings] = {
-          deriveConfiguredDecoder[Settings].emap { settings => Right(settings) }
-        }
-      }
-    }
-
+    case class Kafka private(
+                              topicName: String,
+                              bootstrapServers: String,
+                              consumerConf: Map[String, String],
+                              maxBatchSize: Int,
+                              maxBatchWait: FiniteDuration
+                            ) extends Source
     case class Local(path: PathInfo) extends Source
 
     case class PubSub(projectId: String, subscriptionId: String, checkpointSettings: PubSub.CheckpointSettings) extends Source
@@ -294,49 +254,13 @@ object LoaderConfig {
                       maxBatchBytes: Long,
                       numCallbackExecutors: Int) extends StreamSink
 
-    case class Kafka(topicId: String, settings: Kafka.Settings) extends StreamSink
-
-    object Kafka {
-      case class Settings(
-                           clientId: String,
-                           groupId: String,
-                           groupInstanceId: String,
-                           bootstrapServers: String,
-                           autoOffsetReset: String, //enum
-                           maxPollRecords: Int,
-                           maxPollInterval: FiniteDuration,
-                           sessionTimeout: FiniteDuration,
-                           heartBeatInterval: FiniteDuration,
-                           enableAutoCommit: Boolean,
-                           autoCommitInterval: FiniteDuration,
-                           requestTimeout: FiniteDuration,
-                           defaultApiTimeout: FiniteDuration,
-                           isolationLevel: String, //enum
-                           allowAutoCreateTopics: Boolean,
-                           clientRack: String,
-                           closeTimeout: FiniteDuration,
-                           commitTimeout: FiniteDuration,
-                           pollInterval: FiniteDuration,
-                           pollTimeout: FiniteDuration,
-                           commitRecovery: String, //enum
-                           //createConsumer: String,
-                           //recordMetadata
-                           maxPrefetchBatches: Int,
-                           maxBatchSize: Int,
-                           maxBatchWait: FiniteDuration
-                         ) {
-        def unwrap[F[_]: ConcurrentEffect: ContextShift: Clock: Timer]: ConsumerSettings[F, String, String] =
-          ConsumerSettings[F, String, String]
-            .withClientId(clientId)
-            .withBootstrapServers(bootstrapServers)
-      }
-
-      object Settings {
-        implicit val kafkaSettingsDecoder: Decoder[Settings] = {
-          deriveConfiguredDecoder[Settings].emap { settings => Right(settings) }
-        }
-      }
-    }
+    case class Kafka private (
+                               topicName: String,
+                               bootstrapServers: String,
+                               partitionKey: String,
+                               headers: Set[String],
+                               producerConf: Map[String, String]
+    ) extends StreamSink
 
     implicit def sinkConfigDecoder: Decoder[StreamSink] =
       deriveConfiguredDecoder[StreamSink]
