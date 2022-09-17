@@ -257,8 +257,8 @@ object LoaderConfig {
     case class Kafka private (
                                topicName: String,
                                bootstrapServers: String,
-                               partitionKey: String,
-                               headers: Set[String],
+//                               partitionKey: String,
+//                               headers: Set[String],
                                producerConf: Map[String, String]
     ) extends StreamSink
 

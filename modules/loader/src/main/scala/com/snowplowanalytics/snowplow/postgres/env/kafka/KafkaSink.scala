@@ -35,9 +35,17 @@ object KafkaSink {
                                                                  blocker: Blocker
                                                                  /*, backoffPolicy: BackoffPolicy*/): Resource[F, StreamSink[F]] =
     mkProducer(blocker, config).map(writeToKafka(config.topicName/*, backoffPolicy*/))
+//  mkProducer(blocker, config).map { producer => records =>
+//    records.parTraverse_ { record =>
+//      producer
+//        .produceOne_(toProducerRecord(k.topicName, record))
+//        .flatten
+//        .void
+//    }
+//  }
 
   private def mkProducer[F[_]: Sync: ConcurrentEffect: ContextShift](blocker: Blocker,
-                                                                      config: LoaderConfig.StreamSink.Kafka
+                                                                     config: LoaderConfig.StreamSink.Kafka
                                                                     ): Resource[F, KafkaProducer[F, String, Array[Byte]]] = {
     val producerSettings =
       ProducerSettings[F, String, Array[Byte]]
@@ -52,13 +60,16 @@ object KafkaSink {
     KafkaProducer[F].resource(producerSettings)
   }
 
+//  private def toProducerRecord(topicName: String, record: AttributedData[Array[Byte]]): ProducerRecord[String, Array[Byte]] =
+//    ProducerRecord(topicName, UUID.randomUUID().toString, record.data)
+//      .withHeaders(Headers.fromIterable(record.attributes.map(t => Header(t._1, t._2))))
   private def writeToKafka[F[_]: Async: Timer: ContextShift](streamName: String/*, _backoffPolicy: BackoffPolicy*/)
                                                               (producer: KafkaProducer[F, String, Array[Byte]])
                                                               (data: Array[Byte]): F[Unit] = {
     val res = for {
       partitionKey <- Async[F].delay(UUID.randomUUID().toString)
       record = ProducerRecord(streamName, partitionKey, data)
-      cb <- producer.produce(ProducerRecords.one(record))
+      cb <- producer.produceOne_(record)
 //      cbRes <- registerCallback(cb)
       _ <- ContextShift[F].shift
     } yield cb

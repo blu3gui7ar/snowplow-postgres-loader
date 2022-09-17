@@ -87,9 +87,9 @@
       "topicName": "bad-rows",
       "bootstrapServers": "18.216.111.42:9092",
       # Optional. Enriched event field to use as Kafka partition key
-      "partitionKey": "app_id"
+      #"partitionKey": "app_id"
       # Optional. Enriched event fields to add as Kafka record headers
-      "headers": [ "app_id" ]
+      #"headers": [ "app_id" ]
 
       "producerConf": {
         "client.id": "kafka-postgres-loader",
